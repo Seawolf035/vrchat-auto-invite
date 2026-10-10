@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - ".github/tgc-v14-upload/chunk*.b64"
+      - ".github/tgc-v14-payload/p*.b64"
+      - ".github/workflows/tgc-v14-import.yml"
 
 permissions:
   contents: write
@@ -21,12 +22,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in chunk01.b64 chunk02.b64 chunk03.b64 chunk04.b64; do
-            test -f ".github/tgc-v14-upload/$f" || { echo "Waiting for remaining chunks"; exit 0; }
+
+          parts=(p00.b64 p01.b64 p02.b64 p03.b64 p04.b64 p05.b64 p06.b64 p07.b64 p08.b64 p09.b64 p10.b64)
+          for f in "${parts[@]}"; do
+            test -f ".github/tgc-v14-payload/$f" || { echo "Missing $f"; exit 1; }
           done
 
-          cat .github/tgc-v14-upload/chunk01.b64               .github/tgc-v14-upload/chunk02.b64               .github/tgc-v14-upload/chunk03.b64               .github/tgc-v14-upload/chunk04.b64               > /tmp/tgc_v14.b64
+          : > /tmp/tgc_v14.b64
+          for f in "${parts[@]}"; do
+            cat ".github/tgc-v14-payload/$f" >> /tmp/tgc_v14.b64
+          done
+
+          test "$(wc -c < /tmp/tgc_v14.b64)" -eq 92388
           base64 --decode /tmp/tgc_v14.b64 > /tmp/tgc_v14.zip
+          unzip -t /tmp/tgc_v14.zip
 
           rm -rf /tmp/tgc_v14
           mkdir -p /tmp/tgc_v14 AutoInviteApp
@@ -34,40 +43,67 @@ jobs:
           cp -a /tmp/tgc_v14/. AutoInviteApp/
 
           cat > README.md <<'EOF'
-          # vrchat-auto-invite
+# vrchat-auto-invite
 
-          This repository is a maintained fork of **TitanBCXR/vrchat-auto-invite**.
+This repository is a maintained fork of [TitanBCXR/vrchat-auto-invite](https://github.com/TitanBCXR/vrchat-auto-invite).
 
-          The original launcher was created by **Titan_BCXR**. Later updates were made by **MILK & Ajaken365** for Site-19 usage, with additional development by **Seawolf** for **The Gamer Club**.
+The original launcher was created by **Titan_BCXR**. Later updates were made by **MILK & Ajaken365** for Site-19 usage, with additional development by **Seawolf** for **The Gamer Club**.
 
-          This fork contains the current TGC Auto Invite launcher, including file-based VRChat user-ID invites, persistent login/session improvements, the Pending Invite Recycler, and the optional Distributed Invite Node plugin.
+This fork contains the current TGC Auto Invite launcher, including file-based VRChat user-ID invites, persistent login/session improvements, the Pending Invite Recycler, and the optional Distributed Invite Node plugin.
 
-          Original upstream: https://github.com/TitanBCXR/vrchat-auto-invite
+## Running
 
-          ## Running
+Open the `AutoInviteApp` folder and run `AutoInvite.bat`, or install the Python requirements and run `python main.py`.
 
-          Open the `AutoInviteApp` folder and run `AutoInvite.bat`, or install the Python requirements and run `python main.py`.
+## Upstream and license
 
-          ## License
+Original upstream: https://github.com/TitanBCXR/vrchat-auto-invite
 
-          This fork retains the existing MIT license and original project attribution.
-          EOF
+This fork retains the existing MIT license and original project attribution.
+EOF
 
-          printf '\ncryptography>=41.0.0\n' >> AutoInviteApp/requirements.txt
-          awk '!seen[$0]++' AutoInviteApp/requirements.txt > /tmp/requirements.txt
-          mv /tmp/requirements.txt AutoInviteApp/requirements.txt
+          cat > AutoInviteApp/README.md <<'EOF'
+# VRChat Auto Invite — TGC Fork
 
+This is Seawolf's maintained fork of **Titan_BCXR's VRChat Auto Invite launcher**.
+
+## Credits
+
+- **Original launcher:** Titan_BCXR
+- **Later updates:** MILK & Ajaken365 for Site-19 usage
+- **Further development:** Seawolf for The Gamer Club
+
+Original upstream: https://github.com/TitanBCXR/vrchat-auto-invite
+
+## Current TGC functionality
+
+The current build retains the original inviter while adding file-based `usr_...` invites, current-instance inviting, separate logging, encrypted persistent VRChat sessions/2FA handling, the Pending Invite Recycler, and an optional Distributed Invite Node.
+
+The optional Node can watch multiple VRChat instances on one PC, locally deduplicate and buffer sightings, submit them to a configured Google Apps Script relay using a revocable Node ID/key, use a relay-assigned Node Name, and request a Discord verification code. The Node does not use or transmit the parent inviter's VRChat account credentials/session and can run independently of the normal inviter/recycler.
+
+See the included `V9`–`V14` update notes, `NODE_PLUGIN_QUICK_START.txt`, `PENDING_INVITE_RECYCLER_README.txt`, and `VRCX_STYLE_SESSION_README.txt` for details.
+
+## Windows
+
+Run `AutoInvite.bat`, or install `requirements.txt` and run `python main.py`.
+
+Python 3.8+ is required.
+
+## License
+
+This fork retains the existing MIT license and original project attribution.
+EOF
+
+          grep -qxF 'cryptography>=41.0.0' AutoInviteApp/requirements.txt || echo 'cryptography>=41.0.0' >> AutoInviteApp/requirements.txt
+
+          rm -f AutoInviteApp/vrchat_auto_invite.log
+          rm -rf AutoInviteApp/plugins/__pycache__
           rm -rf .github/tgc-v14-upload
+          rm -rf .github/tgc-v14-payload
           rm -f .github/workflows/tgc-v14-import.yml
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-
           git commit -m "Update TGC fork to v14 distributed node build"
           git push
