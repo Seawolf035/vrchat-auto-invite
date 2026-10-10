@@ -1,0 +1,61 @@
+name: Publish TGC v14 release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/publish-tgc-v14-release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build release ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          zip -r VRChat-Auto-Invite-TGC-v14.zip AutoInviteApp \
+            -x "*/__pycache__/*" "*.pyc" "AutoInviteApp/vrchat_auto_invite.log"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create v14.0.0 \
+            VRChat-Auto-Invite-TGC-v14.zip \
+            --target "${GITHUB_SHA}" \
+            --title "TGC VRChat Auto Invite v14" \
+            --notes-file - <<'EOF'
+          ## TGC VRChat Auto Invite v14
+
+          Maintained fork of **Titan_BCXR's VRChat Auto Invite launcher**.
+
+          ### Credits
+          - Original launcher: **Titan_BCXR**
+          - Later updates: **MILK & Ajaken365** for Site-19 usage
+          - Further development: **Seawolf** for **The Gamer Club**
+
+          ### Highlights
+          - File-based inviting by VRChat `usr_...` IDs
+          - Current-instance inviting
+          - Persistent encrypted login/session support and 2FA compatibility fixes
+          - Separate Logs tab
+          - Pending Invite Recycler
+          - Optional distributed Invite Node plugin
+          - Multi-instance VRChat output-log watching
+          - Offline SQLite buffering and local dedupe
+          - Relay-assigned Node Name
+          - Discord node-link verification via `/verifynode`
+
+          The distributed Node feature is optional; the normal inviter and Pending Invite Recycler remain available independently.
+
+          See the repository README for setup and usage details.
+          EOF
