@@ -1,0 +1,73 @@
+name: Import TGC v14 launcher
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/tgc-v14-upload/chunk*.b64"
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild and import launcher
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in chunk01.b64 chunk02.b64 chunk03.b64 chunk04.b64; do
+            test -f ".github/tgc-v14-upload/$f" || { echo "Waiting for remaining chunks"; exit 0; }
+          done
+
+          cat .github/tgc-v14-upload/chunk01.b64               .github/tgc-v14-upload/chunk02.b64               .github/tgc-v14-upload/chunk03.b64               .github/tgc-v14-upload/chunk04.b64               > /tmp/tgc_v14.b64
+          base64 --decode /tmp/tgc_v14.b64 > /tmp/tgc_v14.zip
+
+          rm -rf /tmp/tgc_v14
+          mkdir -p /tmp/tgc_v14 AutoInviteApp
+          unzip -q /tmp/tgc_v14.zip -d /tmp/tgc_v14
+          cp -a /tmp/tgc_v14/. AutoInviteApp/
+
+          cat > README.md <<'EOF'
+          # vrchat-auto-invite
+
+          This repository is a maintained fork of **TitanBCXR/vrchat-auto-invite**.
+
+          The original launcher was created by **Titan_BCXR**. Later updates were made by **MILK & Ajaken365** for Site-19 usage, with additional development by **Seawolf** for **The Gamer Club**.
+
+          This fork contains the current TGC Auto Invite launcher, including file-based VRChat user-ID invites, persistent login/session improvements, the Pending Invite Recycler, and the optional Distributed Invite Node plugin.
+
+          Original upstream: https://github.com/TitanBCXR/vrchat-auto-invite
+
+          ## Running
+
+          Open the `AutoInviteApp` folder and run `AutoInvite.bat`, or install the Python requirements and run `python main.py`.
+
+          ## License
+
+          This fork retains the existing MIT license and original project attribution.
+          EOF
+
+          printf '\ncryptography>=41.0.0\n' >> AutoInviteApp/requirements.txt
+          awk '!seen[$0]++' AutoInviteApp/requirements.txt > /tmp/requirements.txt
+          mv /tmp/requirements.txt AutoInviteApp/requirements.txt
+
+          rm -rf .github/tgc-v14-upload
+          rm -f .github/workflows/tgc-v14-import.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Update TGC fork to v14 distributed node build"
+          git push
