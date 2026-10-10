@@ -23,7 +23,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .github/tgc-v14-payload/p00.b64 .github/tgc-v14-payload/p01.b64 .github/tgc-v14-payload/p02.b64 .github/tgc-v14-payload/p03.b64 .github/tgc-v14-payload/p04.b64 .github/tgc-v14-payload/p05.b64 .github/tgc-v14-payload/p06.b64 .github/tgc-v14-payload/p07.b64 .github/tgc-v14-payload/p08.b64 .github/tgc-v14-payload/p09.b64 .github/tgc-v14-payload/p10.b64 > /tmp/tgc_v14.b64
+          : > /tmp/tgc_v14.b64
+          cat .github/tgc-v14-payload/p00.b64 >> /tmp/tgc_v14.b64
+          head -c 8000 .github/tgc-v14-payload/p01.b64 >> /tmp/tgc_v14.b64
+          cat .github/tgc-v14-payload/p02.b64 .github/tgc-v14-payload/p03.b64 .github/tgc-v14-payload/p04.b64 .github/tgc-v14-payload/p05.b64 .github/tgc-v14-payload/p06.b64 >> /tmp/tgc_v14.b64
+          head -c 9000 .github/tgc-v14-payload/p07.b64 >> /tmp/tgc_v14.b64
+          cat .github/tgc-v14-payload/p08.b64 >> /tmp/tgc_v14.b64
+          head -c 9000 .github/tgc-v14-payload/p09.b64 >> /tmp/tgc_v14.b64
+          cat .github/tgc-v14-payload/p10.b64 >> /tmp/tgc_v14.b64
           test "$(wc -c < /tmp/tgc_v14.b64)" -eq 92388
           base64 --decode /tmp/tgc_v14.b64 > /tmp/tgc_v14.zip
           unzip -t /tmp/tgc_v14.zip
