@@ -1,0 +1,6 @@
+size=92388
+b64_sha256=0cf701130a00fc08d997e65e3fc9061b52bec21c2f2e233ba2b7bcb709c8edca
+decode=ok
+zip_size=69289
+zip_sha256=2559e4a48f9a688f8bb76bf1ff3fe9296bc0dd9d814ebe0d95d850ceff46b131
+unzip=failed
