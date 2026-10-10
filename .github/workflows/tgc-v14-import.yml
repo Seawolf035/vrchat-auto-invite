@@ -1,4 +1,4 @@
-name: Import TGC v14 launcher
+name: Diagnose TGC v14 payload
 
 on:
   push:
@@ -11,18 +11,17 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Import launcher source
+      - name: Diagnose payload
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
           : > /tmp/tgc_v14.b64
           cat .github/tgc-v14-payload/p00.b64 >> /tmp/tgc_v14.b64
           head -c 8000 .github/tgc-v14-payload/p01.b64 >> /tmp/tgc_v14.b64
@@ -31,19 +30,24 @@ jobs:
           cat .github/tgc-v14-payload/p08.b64 >> /tmp/tgc_v14.b64
           head -c 9000 .github/tgc-v14-payload/p09.b64 >> /tmp/tgc_v14.b64
           cat .github/tgc-v14-payload/p10.b64 >> /tmp/tgc_v14.b64
-          test "$(wc -c < /tmp/tgc_v14.b64)" -eq 92388
-          base64 --decode /tmp/tgc_v14.b64 > /tmp/tgc_v14.zip
-          unzip -t /tmp/tgc_v14.zip
-          rm -rf /tmp/tgc_v14
-          mkdir -p /tmp/tgc_v14 AutoInviteApp
-          unzip -q /tmp/tgc_v14.zip -d /tmp/tgc_v14
-          cp -a /tmp/tgc_v14/. AutoInviteApp/
-          rm -f AutoInviteApp/vrchat_auto_invite.log
-          rm -rf AutoInviteApp/plugins/__pycache__
-          rm -rf .github/tgc-v14-upload
-          rm -rf .github/tgc-v14-payload
+          {
+            echo "size=$(wc -c < /tmp/tgc_v14.b64)"
+            echo "b64_sha256=$(sha256sum /tmp/tgc_v14.b64 | cut -d' ' -f1)"
+            if base64 --decode /tmp/tgc_v14.b64 > /tmp/tgc_v14.zip 2>/tmp/base64.err; then
+              echo "decode=ok"
+              echo "zip_size=$(wc -c < /tmp/tgc_v14.zip)"
+              echo "zip_sha256=$(sha256sum /tmp/tgc_v14.zip | cut -d' ' -f1)"
+              if unzip -t /tmp/tgc_v14.zip >/tmp/unzip.out 2>&1; then
+                echo "unzip=ok"
+              else
+                echo "unzip=failed"
+              fi
+            else
+              echo "decode=failed"
+            fi
+          } > .github/tgc-v14-diagnostic.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Update TGC fork to v14 distributed node build"
+          git add .github/tgc-v14-diagnostic.txt
+          git commit -m "Record TGC v14 payload diagnostics" || true
           git push
