@@ -1,0 +1,68 @@
+name: Update v14 release plugin download
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/update-v14-release.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  update-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rebuild recycler plugin ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/recycler-release/p0.b64 \
+              .github/recycler-release/p1.b64 \
+              .github/recycler-release/p2.b64 > /tmp/recycler.b64
+          base64 --decode /tmp/recycler.b64 > /tmp/Pending-Invite-Recycler-Plugin-v14.zip
+          unzip -t /tmp/Pending-Invite-Recycler-Plugin-v14.zip
+
+      - name: Upload plugin asset and refresh release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload v14.0.0 \
+            /tmp/Pending-Invite-Recycler-Plugin-v14.zip \
+            --clobber
+
+          cat > /tmp/release-notes.md <<'EOF'
+          ## TGC VRChat Auto Invite v14
+
+          Maintained fork of **Titan_BCXR's VRChat Auto Invite launcher**.
+
+          ### Credits
+          - Original launcher: **Titan_BCXR**
+          - Later updates: **MILK & Ajaken365** for Site-19 usage
+          - Further development: **Seawolf** for **The Gamer Club**
+
+          ### Highlights
+          - File-based inviting by VRChat `usr_...` IDs
+          - Current-instance inviting
+          - Persistent encrypted login/session support and 2FA compatibility fixes
+          - Separate Logs tab
+          - Pending Invite Recycler
+
+          ### Plugin Downloads
+          The **Pending Invite Recycler** is also available as a standalone plugin package:
+
+          [Download Pending Invite Recycler Plugin](https://github.com/Seawolf035/vrchat-auto-invite/releases/download/v14.0.0/Pending-Invite-Recycler-Plugin-v14.zip)
+
+          Extract `pending_invite_recycler.py` into the launcher's `plugins/` folder and restart/reload the application.
+
+          See the repository README for setup and usage details.
+          EOF
+
+          gh release edit v14.0.0 \
+            --title "TGC VRChat Auto Invite v14" \
+            --notes-file /tmp/release-notes.md
